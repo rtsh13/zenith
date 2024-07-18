@@ -6,7 +6,7 @@ import (
 	"os"
 	"strings"
 
-	z "github.com/zenith/pkg/client"
+	z "github.com/zenith/client"
 )
 
 func main() {
