@@ -7,9 +7,13 @@ import (
 	"strings"
 
 	z "github.com/zenith/client"
+	resp "github.com/zenith/redis-protocol"
 )
 
 func main() {
+	p := resp.New()
+	client := z.NewClient(p)
+
 	reader := bufio.NewReader(os.Stdin)
 
 	for {
@@ -31,7 +35,7 @@ func main() {
 		case strings.ToLower("help"):
 			help()
 		default:
-			execute(input)
+			client.Exec(strings.Fields(input))
 		}
 	}
 }
@@ -45,14 +49,5 @@ func help() {
 	fmt.Fprintln(os.Stdout, "  ECHO <message>      : Echo the message")
 	fmt.Fprintln(os.Stdout, "  PING                : Ping the server")
 	fmt.Fprintln(os.Stdout, "  help                : Show this help message")
-}
-
-func execute(input string) {
-	c := z.NewClient(strings.Fields(input))
-	if err := c.Validate(); err != nil {
-		os.Stderr.Write([]byte(err.Error() + "\n"))
-		return
-	}
-
-	fmt.Fprint(os.Stdout, c.Serialize())
+	fmt.Fprintln(os.Stdout, "  exit                : Exit session")
 }
