@@ -8,7 +8,7 @@ const (
 	PingCMD = "PING"
 )
 
-var cmdArgCounts = map[string]int{
+var commandArgs = map[string]int{
 	SetCMD:  2,
 	GetCMD:  1,
 	DelCMD:  1,
@@ -16,7 +16,13 @@ var cmdArgCounts = map[string]int{
 	PingCMD: 0,
 }
 
-func AllowedArgs(cmd string) (int, bool) {
-	count, isValid := cmdArgCounts[cmd]
+func Arguments(cmd string) (int, bool) {
+	count, isValid := commandArgs[cmd]
 	return count, isValid
 }
+
+const (
+	Carraige = "\r"
+	LineFeed = "\n"
+	CRLF     = Carraige + LineFeed
+)
