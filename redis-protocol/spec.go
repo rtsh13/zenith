@@ -16,6 +16,8 @@ var (
 	ErrInvalidStartCharacter = server.ProtocolError{Message: "invalid start character : %v"}
 	ErrInvalidBulkString     = server.ProtocolError{Message: "invalid bulk string prefix. expected : %v, got : %v"}
 	ErrInvalidBulkLength     = server.ProtocolError{Message: "invalid bulk length"}
+	ErrInvalidSingleString   = server.ProtocolError{Message: "invalid single string prefix. expected : %v, got : %v"}
+	ErrInvalidSingleLength   = server.ProtocolError{Message: "invalid single string length"}
 	ErrUnexpectedEndOfStream = server.ProtocolError{Message: "unexpected end of stream"}
 )
 
@@ -33,17 +35,18 @@ func New() Protocol {
 func (r *resp) Serialize(input []string) string {
 	arr := make([]string, 0)
 
+	// handle simple strings and errors
+	// if len > 1, the input is a bulk string
 	if len(input) == 1 {
 		switch {
-		case input[0] == "OK":
+		case strings.HasPrefix(input[0], pkg.ERR):
+			return fmt.Sprintf("%s%s", input[0], pkg.CRLF)
+		default:
 			return fmt.Sprintf("+%s%s", input[0], pkg.CRLF)
-		case strings.HasPrefix(input[0], "-ERR"):
-			return fmt.Sprintf("-%s%s", input[0], pkg.CRLF)
-		case input[0] != "OK":
-			return fmt.Sprintf("$%d%s%v", len(input[0]), pkg.CRLF, input[0])
 		}
 	}
 
+	//serializing bulk string
 	for _, value := range input {
 		arr = append(arr, fmt.Sprintf("$%d%s%v", len(value), pkg.CRLF, value))
 	}
@@ -68,9 +71,40 @@ func (r *resp) parseCMD(input string) (strings.Builder, error) {
 	scanner := bufio.NewScanner(strings.NewReader(input))
 	scanner.Split(bufio.ScanLines)
 
-	if !scanner.Scan() || !strings.HasPrefix(scanner.Text(), "*") {
-		return response, fmt.Errorf(ErrInvalidStartCharacter.Message, scanner.Text())
+	if !scanner.Scan() {
+		return strings.Builder{}, ErrScanningInput
 	}
+
+	switch {
+	case strings.HasPrefix(scanner.Text(), "*"):
+		return r.bulkStrings(scanner)
+	case strings.HasPrefix(scanner.Text(), "+"):
+		return r.simpleStrings(scanner)
+	case strings.HasPrefix(scanner.Text(), pkg.ERR):
+		return r.errors(scanner)
+	}
+
+	return response, ErrInvalidStartCharacter
+}
+
+// "+PONG\r\n"
+func (r *resp) simpleStrings(scanner *bufio.Scanner) (strings.Builder, error) {
+	var response strings.Builder
+
+	line := scanner.Text()
+	if !strings.HasPrefix(line, "+") {
+		return strings.Builder{}, fmt.Errorf(ErrInvalidSingleString.Message, "+", scanner.Text())
+	}
+
+	token := strings.TrimPrefix(line, "+")
+	response.WriteString(fmt.Sprintf("%d%s", len(token), token))
+
+	return response, nil
+}
+
+// "*3\r\n$3\r\nSETi\r\n$5\r\nHELLO\r\n$5\r\nWORLD\r\n"
+func (r *resp) bulkStrings(scanner *bufio.Scanner) (strings.Builder, error) {
+	var response strings.Builder
 
 	for scanner.Scan() {
 		line := scanner.Text()
@@ -91,6 +125,20 @@ func (r *resp) parseCMD(input string) (strings.Builder, error) {
 		nextLine := scanner.Text()
 		response.WriteString(nextLine)
 	}
+
+	return response, nil
+}
+
+func (r *resp) errors(scanner *bufio.Scanner) (strings.Builder, error) {
+	var response strings.Builder
+
+	line := scanner.Text()
+	if !strings.HasPrefix(line, "-") {
+		return strings.Builder{}, fmt.Errorf(ErrInvalidSingleString.Message, "-", scanner.Text())
+	}
+
+	token := strings.TrimPrefix(line, "-")
+	response.WriteString(fmt.Sprintf("%d%s", len(token), token))
 
 	return response, nil
 }
