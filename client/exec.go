@@ -26,7 +26,14 @@ func (c *Client) Exec(input []string) {
 		return
 	}
 
-	fmt.Fprint(os.Stdout, c.s.Exec(c.p.Serialize(input)))
+	response := c.s.Exec(c.p.Serialize(input))
+
+	clientOutput, err := c.p.Deserialize(response)
+	if err != nil {
+		fmt.Fprint(os.Stderr, err)
+	}
+
+	fmt.Fprint(os.Stdout, clientOutput.String())
 }
 
 func (c *Client) Validate(args []string) error {
