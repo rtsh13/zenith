@@ -7,14 +7,17 @@ import (
 
 	"github.com/zenith"
 	redis "github.com/zenith/redis-protocol"
+	"github.com/zenith/server"
 )
 
 type Client struct {
 	p redis.Protocol
+	s server.Server
 }
 
 func NewClient(p redis.Protocol) *Client {
-	return &Client{p: p}
+	s := server.New()
+	return &Client{p: p, s: s}
 }
 
 func (c *Client) Exec(input []string) {
@@ -23,7 +26,7 @@ func (c *Client) Exec(input []string) {
 		return
 	}
 
-	fmt.Fprint(os.Stdout, c.p.Serialize(input))
+	fmt.Fprint(os.Stdout, c.s.Exec(c.p.Serialize(input)))
 }
 
 func (c *Client) Validate(args []string) error {
