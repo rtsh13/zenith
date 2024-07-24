@@ -2,8 +2,6 @@ package server
 
 import (
 	"sync"
-
-	"github.com/zenith"
 )
 
 type database struct {
@@ -23,7 +21,7 @@ func newDatabase() dbOps {
 	return &database{records: make(map[string]string, 0), mu: sync.Mutex{}}
 }
 
-func (d *database) Ping() string { return "PONG" + zenith.CRLF }
+func (d *database) Ping() string { return "PONG" }
 
 func (d *database) Set(key, value string) {
 	d.mu.Lock()
