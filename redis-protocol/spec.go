@@ -6,15 +6,17 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/zenith"
+	pkg "github.com/zenith"
+
+	"github.com/zenith/errors/server"
 )
 
 var (
-	ErrScanningInput         = zenith.ScannerError{Message: "error : [%v] in scanning input"}
-	ErrInvalidStartCharacter = zenith.ProtocolError{Message: "invalid start character : %v"}
-	ErrInvalidBulkString     = zenith.ProtocolError{Message: "invalid bulk string prefix. expected : %v, got : %v"}
-	ErrInvalidBulkLength     = zenith.ProtocolError{Message: "invalid bulk length"}
-	ErrUnexpectedEndOfStream = zenith.ProtocolError{Message: "unexpected end of stream"}
+	ErrScanningInput         = server.ScannerError{Message: "error : [%v] in scanning input"}
+	ErrInvalidStartCharacter = server.ProtocolError{Message: "invalid start character : %v"}
+	ErrInvalidBulkString     = server.ProtocolError{Message: "invalid bulk string prefix. expected : %v, got : %v"}
+	ErrInvalidBulkLength     = server.ProtocolError{Message: "invalid bulk length"}
+	ErrUnexpectedEndOfStream = server.ProtocolError{Message: "unexpected end of stream"}
 )
 
 type resp struct{}
@@ -31,13 +33,24 @@ func New() Protocol {
 func (r *resp) Serialize(input []string) string {
 	arr := make([]string, 0)
 
-	for _, value := range input {
-		arr = append(arr, fmt.Sprintf("$%d%s%v", len(value), zenith.CRLF, value))
+	if len(input) == 1 {
+		switch {
+		case input[0] == "OK":
+			return fmt.Sprintf("+%s%s", input[0], pkg.CRLF)
+		case strings.HasPrefix(input[0], "-ERR"):
+			return fmt.Sprintf("-%s%s", input[0], pkg.CRLF)
+		case input[0] != "OK":
+			return fmt.Sprintf("$%d%s%v", len(input[0]), pkg.CRLF, input[0])
+		}
 	}
 
-	response := strings.Join(arr, zenith.CRLF)
+	for _, value := range input {
+		arr = append(arr, fmt.Sprintf("$%d%s%v", len(value), pkg.CRLF, value))
+	}
 
-	return fmt.Sprintf("*%d%s%v%s", len(input), zenith.CRLF, response, zenith.CRLF)
+	response := strings.Join(arr, pkg.CRLF)
+
+	return fmt.Sprintf("*%d%s%v%s", len(input), pkg.CRLF, response, pkg.CRLF)
 }
 
 func (r *resp) Deserialize(input string) (strings.Builder, error) {
@@ -46,12 +59,7 @@ func (r *resp) Deserialize(input string) (strings.Builder, error) {
 		return strings.Builder{}, err
 	}
 
-	instructions, err := r.insBuilder(parsedCommand.String())
-	if err != nil || instructions.Len() <= 0 {
-		return strings.Builder{}, err
-	}
-
-	return instructions, nil
+	return r.insBuilder(parsedCommand.String())
 }
 
 func (r *resp) parseCMD(input string) (strings.Builder, error) {
