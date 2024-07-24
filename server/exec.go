@@ -8,7 +8,7 @@ import (
 )
 
 type Server interface {
-	Exec(input string) interface{}
+	Exec(input string) string
 }
 
 type server struct {
@@ -23,10 +23,10 @@ func New() Server {
 	return &server{protocol: protocol, Database: d}
 }
 
-type respond func(string, error) interface{}
+type respond func(string, error) string
 
 func dbSerializer(protocol resp.Protocol) respond {
-	return func(response string, err error) interface{} {
+	return func(response string, err error) string {
 		if err != nil {
 			return protocol.Serialize([]string{err.Error()})
 		}
@@ -35,7 +35,7 @@ func dbSerializer(protocol resp.Protocol) respond {
 	}
 }
 
-func (s *server) Exec(input string) interface{} {
+func (s *server) Exec(input string) string {
 	responder := dbSerializer(s.protocol)
 
 	instructions, err := s.protocol.Deserialize(input)
@@ -48,12 +48,12 @@ func (s *server) Exec(input string) interface{} {
 	switch cmd[0] {
 	case pkg.SetCMD:
 		s.Database.Set(cmd[1], cmd[2])
-		return responder("OK", nil)
+		return responder(pkg.OK, nil)
 	case pkg.GetCMD:
 		return responder(s.Database.Get(cmd[1]), nil)
 	case pkg.DelCMD:
 		s.Database.Delete(cmd[1])
-		return responder("OK", nil)
+		return responder(pkg.OK, nil)
 	case pkg.EchoCMD:
 		return responder(s.Database.Echo(cmd[1]), nil)
 	case pkg.PingCMD:
