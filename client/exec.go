@@ -6,7 +6,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/zenith"
+	pkg "github.com/zenith"
+	errors "github.com/zenith/errors/client"
 
 	resp "github.com/zenith/redis-protocol"
 )
@@ -61,19 +62,19 @@ func (c *client) Exec(input []string) {
 		fmt.Fprint(os.Stderr, err)
 	}
 
-	fmt.Fprint(os.Stdout, clientOutput.String()+zenith.LineFeed)
+	fmt.Fprint(os.Stdout, clientOutput.String()+pkg.LineFeed)
 }
 
 func validate(args []string) error {
 	cmd := args[0]
 
-	count, ok := zenith.Arguments(strings.ToUpper(cmd))
+	count, ok := pkg.Arguments(strings.ToUpper(cmd))
 	if !ok {
-		return zenith.UnknownCommand{Command: cmd, Args: args[1:]}
+		return errors.UnknownCommand{Command: cmd, Args: args[1:]}
 	}
 
 	if len(args)-1 != count {
-		return zenith.InvalidArgs{Command: cmd}
+		return errors.InvalidArgs{Command: cmd}
 	}
 
 	return nil
