@@ -17,3 +17,12 @@ type ScannerError struct {
 func (s ScannerError) Error() string {
 	return fmt.Sprintf("-ERR Input Scan error: %s", s.Message)
 }
+
+type UnknownCommand struct {
+	Command string
+	Args    []string
+}
+
+func (u UnknownCommand) Error() string {
+	return fmt.Sprintf("(error) ERR unknown command '%v', with args beginning with: %v", u.Command, u.Args)
+}

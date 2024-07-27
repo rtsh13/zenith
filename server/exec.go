@@ -7,6 +7,8 @@ import (
 	"strings"
 
 	pkg "github.com/zenith"
+
+	errors "github.com/zenith/errors/server"
 	resp "github.com/zenith/redis-protocol"
 )
 
@@ -72,6 +74,6 @@ func (s *server) exec(input string) string {
 	case pkg.PingCMD:
 		return responder(s.db.Ping(), nil)
 	default:
-		return responder("", pkg.UnknownCommand{Command: cmd[0], Args: cmd[1:]})
+		return responder("", errors.UnknownCommand{Command: cmd[0], Args: cmd[1:]})
 	}
 }
