@@ -2,27 +2,38 @@ package client
 
 import (
 	"fmt"
+	"net"
 	"os"
 	"strings"
 
 	"github.com/zenith"
-	redis "github.com/zenith/redis-protocol"
-	"github.com/zenith/server"
+
+	resp "github.com/zenith/redis-protocol"
 )
 
-type Client struct {
-	p redis.Protocol
-	s server.Server
+type client struct {
+	protocol resp.Protocol
 }
 
-func NewClient(p redis.Protocol) *Client {
-	s := server.New()
-	return &Client{p: p, s: s}
+func New() *client {
+	return &client{protocol: resp.New()}
 }
 
-func (c *Client) Exec(input []string) {
-	if err := c.Validate(input); err != nil {
-		os.Stderr.Write([]byte(err.Error() + "\n"))
+func (c *client) Exec(input []string) {
+	if err := validate(input); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		return
+	}
+
+	conn, err := net.Dial("tcp", ":6379")
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		return
+	}
+
+	_, err = conn.Write([]byte(c.protocol.Serialize(input)))
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
 		return
 	}
 
