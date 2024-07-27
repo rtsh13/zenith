@@ -25,4 +25,7 @@ const (
 	Carraige = "\r"
 	LineFeed = "\n"
 	CRLF     = Carraige + LineFeed
+
+	OK  = "OK"
+	ERR = "-ERR"
 )

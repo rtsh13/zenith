@@ -2,31 +2,69 @@ package client
 
 import (
 	"fmt"
+	"net"
 	"os"
 	"strings"
 
 	"github.com/zenith"
-	redis "github.com/zenith/redis-protocol"
+
+	resp "github.com/zenith/redis-protocol"
 )
 
-type Client struct {
-	p redis.Protocol
+type client struct {
+	protocol resp.Protocol
 }
 
-func NewClient(p redis.Protocol) *Client {
-	return &Client{p: p}
+func New() *client {
+	return &client{protocol: resp.New()}
 }
 
-func (c *Client) Exec(input []string) {
-	if err := c.Validate(input); err != nil {
-		os.Stderr.Write([]byte(err.Error() + "\n"))
+func (c *client) Exec(input []string) {
+	if err := validate(input); err != nil {
+		fmt.Fprintln(os.Stderr, err)
 		return
 	}
 
-	fmt.Fprint(os.Stdout, c.p.Serialize(input))
+	conn, err := net.Dial("tcp", ":6379")
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		return
+	}
+
+	_, err = conn.Write([]byte(c.protocol.Serialize(input)))
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		return
+	}
+
+	var (
+		buffer = make([]byte, 1024)
+		data   = strings.Builder{}
+	)
+
+	for {
+		n, err := conn.Read(buffer)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			return
+		}
+
+		data.WriteString(string(buffer[:n]))
+
+		if n < len(buffer) {
+			break
+		}
+	}
+
+	clientOutput, err := c.protocol.Deserialize(data.String())
+	if err != nil {
+		fmt.Fprint(os.Stderr, err)
+	}
+
+	fmt.Fprint(os.Stdout, clientOutput.String()+zenith.LineFeed)
 }
 
-func (c *Client) Validate(args []string) error {
+func validate(args []string) error {
 	cmd := args[0]
 
 	count, ok := zenith.Arguments(strings.ToUpper(cmd))

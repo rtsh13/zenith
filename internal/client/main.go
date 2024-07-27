@@ -6,13 +6,11 @@ import (
 	"os"
 	"strings"
 
-	z "github.com/zenith/client"
-	resp "github.com/zenith/redis-protocol"
+	"github.com/zenith/client"
 )
 
 func main() {
-	p := resp.New()
-	client := z.NewClient(p)
+	client := client.New()
 
 	reader := bufio.NewReader(os.Stdin)
 
@@ -27,12 +25,13 @@ func main() {
 
 		input = strings.TrimSpace(input)
 
-		switch input {
-		case "":
+		switch {
+		case len(input) == 0:
 			continue
-		case strings.ToLower("exit"):
-			os.Exit(1)
-		case strings.ToLower("help"):
+		case strings.EqualFold(input, "exit"):
+			fmt.Fprintln(os.Stdout, "Exiting....")
+			os.Exit(0)
+		case strings.EqualFold(input, "help"):
 			help()
 		default:
 			client.Exec(strings.Fields(input))
