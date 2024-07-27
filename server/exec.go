@@ -58,19 +58,19 @@ func (s *server) exec(input string) string {
 
 	cmd := strings.Split(instructions.String(), " ")
 
-	switch cmd[0] {
+	switch strings.ToUpper(cmd[0]) {
 	case pkg.SetCMD:
-		s.Database.Set(cmd[1], cmd[2])
+		s.db.Set(cmd[1], cmd[2])
 		return responder(pkg.OK, nil)
 	case pkg.GetCMD:
-		return responder(s.Database.Get(cmd[1]), nil)
+		return responder(s.db.Get(cmd[1]), nil)
 	case pkg.DelCMD:
-		s.Database.Delete(cmd[1])
+		s.db.Delete(cmd[1])
 		return responder(pkg.OK, nil)
 	case pkg.EchoCMD:
-		return responder(s.Database.Echo(cmd[1]), nil)
+		return responder(s.db.Echo(cmd[1]), nil)
 	case pkg.PingCMD:
-		return responder(s.Database.Ping(), nil)
+		return responder(s.db.Ping(), nil)
 	default:
 		return responder("", pkg.UnknownCommand{Command: cmd[0], Args: cmd[1:]})
 	}
