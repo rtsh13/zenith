@@ -37,17 +37,34 @@ func (c *client) Exec(input []string) {
 		return
 	}
 
-	response := c.s.Exec(c.p.Serialize(input))
+	var (
+		buffer = make([]byte, 1024)
+		data   = strings.Builder{}
+	)
 
-	clientOutput, err := c.p.Deserialize(response)
+	for {
+		n, err := conn.Read(buffer)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			return
+		}
+
+		data.WriteString(string(buffer[:n]))
+
+		if n < len(buffer) {
+			break
+		}
+	}
+
+	clientOutput, err := c.protocol.Deserialize(data.String())
 	if err != nil {
 		fmt.Fprint(os.Stderr, err)
 	}
 
-	fmt.Fprint(os.Stdout, clientOutput.String())
+	fmt.Fprint(os.Stdout, clientOutput.String()+zenith.LineFeed)
 }
 
-func (c *Client) Validate(args []string) error {
+func validate(args []string) error {
 	cmd := args[0]
 
 	count, ok := zenith.Arguments(strings.ToUpper(cmd))
