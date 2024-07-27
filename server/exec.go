@@ -1,6 +1,9 @@
 package server
 
 import (
+	"fmt"
+	"net"
+	"os"
 	"strings"
 
 	pkg "github.com/zenith"
@@ -8,19 +11,29 @@ import (
 )
 
 type Server interface {
-	Exec(input string) string
+	Listen()
 }
 
 type server struct {
 	protocol resp.Protocol
-	Database dbOps
+	db       dbOps
+	listener net.Listener
 }
 
 func New() Server {
 	protocol := resp.New()
 	d := newDatabase()
 
-	return &server{protocol: protocol, Database: d}
+	// PORT should be fetched from cfg
+	// if not found, assign default port
+	// timeout should follow the port pattern
+	conn, err := net.Listen("tcp", ":6379")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error : %v in initialising TCP connection", err.Error())
+		os.Exit(1)
+	}
+
+	return &server{protocol: protocol, db: d, listener: conn}
 }
 
 type respond func(string, error) string
@@ -35,7 +48,7 @@ func dbSerializer(protocol resp.Protocol) respond {
 	}
 }
 
-func (s *server) Exec(input string) string {
+func (s *server) exec(input string) string {
 	responder := dbSerializer(s.protocol)
 
 	instructions, err := s.protocol.Deserialize(input)
