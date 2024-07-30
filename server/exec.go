@@ -9,6 +9,7 @@ import (
 	pkg "github.com/zenith"
 
 	errors "github.com/zenith/errors/server"
+	"github.com/zenith/persistence"
 	resp "github.com/zenith/redis-protocol"
 )
 
@@ -20,6 +21,7 @@ type server struct {
 	protocol resp.Protocol
 	db       dbOps
 	listener net.Listener
+	snapshot persistence.WAL
 }
 
 func New() Server {
@@ -35,23 +37,23 @@ func New() Server {
 		os.Exit(1)
 	}
 
-	return &server{protocol: protocol, db: d, listener: conn}
+	return &server{protocol: protocol, db: d, listener: conn, snapshot: persistence.New()}
 }
 
 type respond func(string, error) string
 
-func dbSerializer(protocol resp.Protocol) respond {
+func (s *server) dbSerializer() respond {
 	return func(response string, err error) string {
 		if err != nil {
-			return protocol.Serialize([]string{err.Error()})
+			return s.protocol.Serialize([]string{err.Error()})
 		}
 
-		return protocol.Serialize([]string{response})
+		return s.protocol.Serialize([]string{response})
 	}
 }
 
 func (s *server) exec(input string) string {
-	responder := dbSerializer(s.protocol)
+	responder := s.dbSerializer()
 
 	instructions, err := s.protocol.Deserialize(input)
 	if err != nil {
@@ -59,6 +61,11 @@ func (s *server) exec(input string) string {
 	}
 
 	cmd := strings.Split(instructions.String(), " ")
+	defer func(string, string) {
+		if cmd[0] == pkg.SetCMD || cmd[0] == pkg.DelCMD {
+			s.snapshot.Push(input)
+		}
+	}(input, cmd[0])
 
 	switch strings.ToUpper(cmd[0]) {
 	case pkg.SetCMD:
