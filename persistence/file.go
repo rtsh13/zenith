@@ -4,7 +4,10 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
+
+	pkg "github.com/zenith"
 )
 
 const (
@@ -82,6 +85,14 @@ func write(a *aof) {
 			if !ok {
 				fmt.Fprint(os.Stderr, "queue is prematurely closed")
 				return //queue closed prematurely. ideally not to be logged
+			}
+
+			// replacing CRLF delimiter with @ to avoid appending logs to new line
+			cmd = strings.Replace(cmd, pkg.CRLF, "@", -1)
+			fInfo, _ := a.f.Stat()
+			if fInfo.Size() != 0 {
+				// if data present, move the file cursor to new line
+				cmd = pkg.CRLF + cmd
 			}
 
 			_, err := a.f.WriteString(cmd)
