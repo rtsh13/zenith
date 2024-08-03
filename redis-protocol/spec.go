@@ -150,7 +150,7 @@ func (r *resp) insBuilder(instruction string) (strings.Builder, error) {
 	for cursor < len(instruction) {
 		cFootprint := cursor
 
-		for instruction[cursor] >= '0' && instruction[cursor] <= '9' {
+		if instruction[cursor] >= '0' && instruction[cursor] <= '9' {
 			cursor++
 		}
 
