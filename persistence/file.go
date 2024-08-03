@@ -76,9 +76,15 @@ func loader(path string) (*os.File, error) {
 	}
 }
 
-func (a *aof) Read() {}
+func (a *aof) File() *os.File {
+	return a.f
+}
 
-func write(a *aof) {
+func (a *aof) Close() error {
+	return a.f.Close()
+}
+
+func (a *aof) write() {
 	for {
 		select {
 		case cmd, ok := <-a.queue:
