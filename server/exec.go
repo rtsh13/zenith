@@ -56,8 +56,8 @@ func (s *server) exec(input string) string {
 
 	cmd := strings.Split(instructions.String(), " ")
 	defer func(string, string) {
-		if cmd[0] == pkg.SetCMD || cmd[0] == pkg.DelCMD {
-			s.snapshot.Push(input)
+		if strings.EqualFold(cmd[0], pkg.SetCMD) || strings.EqualFold(cmd[0], pkg.DelCMD) {
+			s.wal.Push(input)
 		}
 	}(input, cmd[0])
 
