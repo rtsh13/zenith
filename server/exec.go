@@ -78,3 +78,45 @@ func (s *server) exec(input string) string {
 		return responder("", errors.UnknownCommand{Command: cmd[0], Args: cmd[1:]})
 	}
 }
+
+func (s *server) restore() errors.MultipleErrors {
+	mulErr := errors.MultipleErrors{}
+
+	f := s.wal.File()
+	scanner := bufio.NewScanner(f)
+
+	for scanner.Scan() {
+		line := scanner.Text()
+		if err := scanner.Err(); err != nil {
+			mulErr.Errors = append(mulErr.Errors, err)
+			continue
+		}
+
+		if line == "" {
+			continue
+		}
+
+		line = strings.ReplaceAll(line, "@", pkg.CRLF)
+
+		instructions, err := s.protocol.Deserialize(line)
+		if err != nil {
+			mulErr.Errors = append(mulErr.Errors, err)
+			continue
+		}
+
+		cmd := strings.Split(instructions.String(), " ")
+		if cmd[0] == pkg.SetCMD {
+			s.db.Set(cmd[1], cmd[2])
+			continue
+		}
+
+		if cmd[0] == pkg.DelCMD {
+			s.db.Delete(cmd[1])
+			continue
+		}
+
+		mulErr.Errors = append(mulErr.Errors, fmt.Errorf("unknown command : %v to restore from AOF", cmd[0]))
+	}
+
+	return mulErr
+}
