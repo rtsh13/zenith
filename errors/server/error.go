@@ -1,6 +1,9 @@
 package server
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 type ProtocolError struct {
 	Message string
@@ -25,4 +28,18 @@ type UnknownCommand struct {
 
 func (u UnknownCommand) Error() string {
 	return fmt.Sprintf("(error) ERR unknown command '%v', with args beginning with: %v", u.Command, u.Args)
+}
+
+type MultipleErrors struct {
+	Errors []error
+}
+
+func (m MultipleErrors) Error() string {
+	errors := []string{}
+
+	for _, e := range m.Errors {
+		errors = append(errors, e.Error())
+	}
+
+	return strings.Join(errors, ";")
 }
