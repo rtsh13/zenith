@@ -1,6 +1,7 @@
 package server
 
 import (
+	"bufio"
 	"fmt"
 	"net"
 	"os"
@@ -15,23 +16,45 @@ import (
 
 type Server interface {
 	Listen()
+	Close()
 }
 
 type server struct {
 	protocol resp.Protocol
 	db       dbOps
 	listener net.Listener
-	snapshot persistence.WAL
+	wal      persistence.WAL
 }
 
 func New() (Server, error) {
 	conn, err := net.Listen("tcp", ":6379")
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error : %v in initialising TCP connection", err.Error())
-		os.Exit(1)
+		return nil, err
 	}
 
-	return &server{protocol: protocol, db: d, listener: conn, snapshot: persistence.New()}
+	server := server{
+		listener: conn,
+		protocol: resp.New(),
+		db:       newDatabase(),
+		wal:      persistence.New(),
+	}
+
+	if err := server.restore(); len(err.Errors) != 0 {
+		return nil, err
+	}
+
+	return &server, nil
+}
+
+func (s *server) Close() {
+	if err := s.listener.Close(); err != nil {
+		fmt.Fprintf(os.Stderr, "error : [%v] in terminating TCP conn", err)
+	}
+
+	if err := s.wal.Close(); err != nil {
+		fmt.Fprintf(os.Stderr, "error : [%v] in closing the  the file", err)
+	}
 }
 
 type respond func(string, error) string
