@@ -24,13 +24,7 @@ type server struct {
 	snapshot persistence.WAL
 }
 
-func New() Server {
-	protocol := resp.New()
-	d := newDatabase()
-
-	// PORT should be fetched from cfg
-	// if not found, assign default port
-	// timeout should follow the port pattern
+func New() (Server, error) {
 	conn, err := net.Listen("tcp", ":6379")
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error : %v in initialising TCP connection", err.Error())
