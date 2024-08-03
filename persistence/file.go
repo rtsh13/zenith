@@ -21,8 +21,9 @@ type aof struct {
 }
 
 type WAL interface {
-	Read()
 	Push(string)
+	File() *os.File
+	Close() error
 }
 
 func New() WAL {
@@ -42,15 +43,14 @@ func New() WAL {
 		os.Exit(1)
 	}
 
-	t := time.NewTicker(time.Second * 1)
+	aof.f = f
 
+	t := time.NewTicker(time.Second * 1)
 	go func() {
 		for range t.C {
-			write(&aof)
+			aof.write()
 		}
 	}()
-
-	aof.f = f
 
 	return &aof
 }
@@ -68,7 +68,7 @@ func loader(path string) (*os.File, error) {
 	_, err := os.Stat(path)
 	switch {
 	case err == nil:
-		return os.OpenFile(path, os.O_RDWR|os.O_CREATE, 0666)
+		return os.OpenFile(path, os.O_RDWR|os.O_APPEND, 0644)
 	case os.IsNotExist(err):
 		return createFile(path)
 	default:
