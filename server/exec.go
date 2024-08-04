@@ -127,18 +127,18 @@ func (s *server) restore() errors.MultipleErrors {
 			continue
 		}
 
-		cmd := strings.Split(instructions.String(), " ")
-		if cmd[0] == pkg.SetCMD {
-			s.db.Set(cmd[1], cmd[2])
+		ins := strings.Split(instructions.String(), " ")
+		if strings.EqualFold(ins[0], pkg.SET) {
+			s.db.SET(ins[1], ins[2])
 			continue
 		}
 
-		if cmd[0] == pkg.DelCMD {
-			s.db.Delete(cmd[1])
+		if strings.EqualFold(ins[0], pkg.DEL) {
+			s.db.DELETE(ins[1])
 			continue
 		}
 
-		mulErr.Errors = append(mulErr.Errors, fmt.Errorf("unknown command : %v to restore from AOF", cmd[0]))
+		mulErr.Errors = append(mulErr.Errors, fmt.Errorf("unknown command : %v to restore from AOF", ins[0]))
 	}
 
 	return mulErr
