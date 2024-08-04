@@ -1,19 +1,21 @@
 package zenith
 
 const (
-	SetCMD  = "SET"
-	GetCMD  = "GET"
-	DelCMD  = "DEL"
-	EchoCMD = "ECHO"
-	PingCMD = "PING"
+	SET  = "SET"
+	GET  = "GET"
+	DEL  = "DEL"
+	ECHO = "ECHO"
+	PING = "PING"
+	MGET = "MGET"
 )
 
 var commandArgs = map[string]int{
-	SetCMD:  2,
-	GetCMD:  1,
-	DelCMD:  1,
-	EchoCMD: 1,
-	PingCMD: 0,
+	SET:  2,
+	GET:  1,
+	DEL:  1,
+	ECHO: 1,
+	PING: 0,
+	MGET: 100,
 }
 
 func Arguments(cmd string) (int, bool) {

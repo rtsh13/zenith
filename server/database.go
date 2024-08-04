@@ -10,11 +10,12 @@ type database struct {
 }
 
 type dbOps interface {
-	Set(key, value string)
-	Get(key string) string
-	Delete(key string)
-	Echo(input string) string
-	Ping() string
+	SET(key, value string)
+	GET(key string) string
+	DELETE(key string)
+	ECHO(input ...string) []string
+	PING() string
+	MGET(...string) []string
 }
 
 func newDatabase() dbOps {
@@ -49,4 +50,14 @@ func (d *database) Delete(key string) {
 
 func (d *database) Echo(input string) string {
 	return input
+}
+
+func (d *database) MGET(keys ...string) []string {
+	list := make([]string, 0)
+
+	for _, k := range keys {
+		list = append(list, d.GET(k))
+	}
+
+	return list
 }

@@ -73,6 +73,12 @@ func validate(args []string) error {
 		return errors.UnknownCommand{Command: cmd, Args: args[1:]}
 	}
 
+	if strings.EqualFold(cmd, pkg.MGET) {
+		if len(args) >= 1 {
+			return nil
+		}
+	}
+
 	if len(args)-1 != count {
 		return errors.InvalidArgs{Command: cmd}
 	}
