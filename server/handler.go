@@ -44,3 +44,8 @@ func (s *server) echo(args ...string) string {
 	fmt.Fprintf(os.Stdout, "query : [%v], args : [%v]", args[0], strings.Join(args[1:], ","))
 	return s.dbSerializer()(s.db.ECHO(args[1:]...))
 }
+
+func (s *server) incr(args ...string) string {
+	fmt.Fprintf(os.Stdout, "query : [%v], args : [%v]", args[0], strings.Join(args[1:], ","))
+	return s.dbSerializer()(s.db.INCR(args[1]))
+}
