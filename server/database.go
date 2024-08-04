@@ -1,7 +1,12 @@
 package server
 
 import (
+	"fmt"
+	"strconv"
+	"strings"
 	"sync"
+
+	errors "github.com/zenith/errors/server"
 )
 
 type database struct {
@@ -16,6 +21,7 @@ type dbOps interface {
 	ECHO(input ...string) []string
 	PING() string
 	MGET(...string) []string
+	INCR(string) any
 }
 
 func newDatabase() dbOps {
@@ -24,6 +30,12 @@ func newDatabase() dbOps {
 
 func (d *database) PING() string { return "PONG" }
 
+/*
+Description:
+Set key to hold the string value. If key already holds a value, it is overwritten, regardless of its type.
+
+Time Complexity: O(1)
+*/
 func (d *database) SET(key, value string) {
 	d.mu.Lock()
 	defer d.mu.Unlock()
@@ -31,6 +43,11 @@ func (d *database) SET(key, value string) {
 	d.records[key] = value
 }
 
+/*
+Description: Get the string value of key. If the key does not exist, the special value "(nil)" is returned.
+
+Time Complexity: O(1)
+*/
 func (d *database) GET(key string) string {
 	d.mu.Lock()
 	defer d.mu.Unlock()
@@ -60,4 +77,28 @@ func (d *database) MGET(keys ...string) []string {
 	}
 
 	return list
+}
+
+func (d *database) INCR(key string) any {
+	val := d.GET(key)
+
+	// if the key doesn't exist, seed with zero value before completing operation
+	if strings.EqualFold(val, "(nil)") {
+		newVal := 0
+		newVal++
+
+		d.SET(key, strconv.FormatInt(int64(newVal), 10))
+
+		return fmt.Sprintf("(%T) %v", newVal, newVal)
+	}
+
+	intVal, err := strconv.Atoi(val)
+	if err != nil {
+		return errors.CustomError{Message: "value is not an integer or out of range"}
+	}
+
+	intVal++
+	d.SET(key, strconv.FormatInt(int64(intVal), 10))
+
+	return fmt.Sprintf("(%T) %v", intVal, intVal)
 }

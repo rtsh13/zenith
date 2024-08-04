@@ -27,7 +27,7 @@ type UnknownCommand struct {
 }
 
 func (u UnknownCommand) Error() string {
-	return fmt.Sprintf("(error) ERR unknown command '%v', with args beginning with: %v", u.Command, u.Args)
+	return fmt.Sprintf("-ERR unknown command '%v', with args beginning with: %v", u.Command, u.Args)
 }
 
 type MultipleErrors struct {
@@ -42,4 +42,14 @@ func (m MultipleErrors) Error() string {
 	}
 
 	return strings.Join(errors, ";")
+}
+
+type CustomError struct {
+	Message string
+}
+
+func (c CustomError) Error() string {
+	// always prefix the error messages with -ERR
+	// avoids client deserialization errors
+	return fmt.Sprint("-ERR " + c.Message)
 }

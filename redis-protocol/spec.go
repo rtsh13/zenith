@@ -46,7 +46,7 @@ func (r *resp) Serialize(input []string) string {
 		}
 	}
 
-	//serializing bulk string
+	// serializing bulk string
 	for _, value := range input {
 		arr = append(arr, fmt.Sprintf("$%d%s%v", len(value), pkg.CRLF, value))
 	}
@@ -81,7 +81,7 @@ func (r *resp) parseCMD(input string) (strings.Builder, error) {
 	case strings.HasPrefix(scanner.Text(), "+"):
 		return r.simpleStrings(scanner)
 	case strings.HasPrefix(scanner.Text(), pkg.ERR):
-		return r.errors(scanner)
+		return response, r.errors(scanner)
 	}
 
 	return response, ErrInvalidStartCharacter
@@ -129,18 +129,16 @@ func (r *resp) bulkStrings(scanner *bufio.Scanner) (strings.Builder, error) {
 	return response, nil
 }
 
-func (r *resp) errors(scanner *bufio.Scanner) (strings.Builder, error) {
-	var response strings.Builder
-
+func (r *resp) errors(scanner *bufio.Scanner) error {
 	line := scanner.Text()
 	if !strings.HasPrefix(line, "-") {
-		return strings.Builder{}, fmt.Errorf(ErrInvalidSingleString.Message, "-", scanner.Text())
+		return fmt.Errorf(ErrInvalidSingleString.Message, "-", scanner.Text())
 	}
 
 	token := strings.TrimPrefix(line, "-")
-	response.WriteString(fmt.Sprintf("%d%s", len(token), token))
+	// response.WriteString(fmt.Sprintf("%d%s", len(token), token))
 
-	return response, nil
+	return fmt.Errorf(token)
 }
 
 func (r *resp) insBuilder(instruction string) (strings.Builder, error) {

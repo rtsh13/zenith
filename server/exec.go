@@ -26,6 +26,7 @@ func (s *server) route() map[string]cmdRouter {
 		pkg.ECHO: s.echo,
 		pkg.PING: s.ping,
 		pkg.MGET: s.get,
+		pkg.INCR: s.incr,
 	}
 }
 

@@ -7,6 +7,7 @@ const (
 	ECHO = "ECHO"
 	PING = "PING"
 	MGET = "MGET"
+	INCR = "INCR"
 )
 
 var commandArgs = map[string]int{
@@ -16,6 +17,7 @@ var commandArgs = map[string]int{
 	ECHO: 1,
 	PING: 0,
 	MGET: 100,
+	INCR: 1,
 }
 
 func Arguments(cmd string) (int, bool) {
