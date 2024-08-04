@@ -14,6 +14,21 @@ import (
 	resp "github.com/zenith/redis-protocol"
 )
 
+type respond func(interface{}) string
+
+type cmdRouter func(...string) string
+
+func (s *server) route() map[string]cmdRouter {
+	return map[string]cmdRouter{
+		pkg.SET:  s.set,
+		pkg.GET:  s.get,
+		pkg.DEL:  s.delete,
+		pkg.ECHO: s.echo,
+		pkg.PING: s.ping,
+		pkg.MGET: s.get,
+	}
+}
+
 type Server interface {
 	Listen()
 	Close()
@@ -57,15 +72,18 @@ func (s *server) Close() {
 	}
 }
 
-type respond func(string, error) string
-
 func (s *server) dbSerializer() respond {
-	return func(response string, err error) string {
-		if err != nil {
-			return s.protocol.Serialize([]string{err.Error()})
+	return func(response interface{}) string {
+		switch v := response.(type) {
+		case string:
+			return s.protocol.Serialize([]string{v})
+		case []string:
+			return s.protocol.Serialize(v)
+		case error:
+			return s.protocol.Serialize([]string{v.Error()})
+		default:
+			return s.protocol.Serialize([]string{pkg.ERR + ": unknown response type"})
 		}
-
-		return s.protocol.Serialize([]string{response})
 	}
 }
 
@@ -74,32 +92,22 @@ func (s *server) exec(input string) string {
 
 	instructions, err := s.protocol.Deserialize(input)
 	if err != nil {
-		return responder("", err)
+		return responder(err)
 	}
 
-	cmd := strings.Split(instructions.String(), " ")
-	defer func(string, string) {
-		if strings.EqualFold(cmd[0], pkg.SetCMD) || strings.EqualFold(cmd[0], pkg.DelCMD) {
+	ins := strings.Split(instructions.String(), " ")
+
+	if handler, found := s.route()[strings.ToUpper(ins[0])]; found {
+		response := handler(ins...)
+
+		if strings.EqualFold(ins[0], pkg.SET) || strings.EqualFold(ins[0], pkg.DEL) {
 			s.wal.Push(input)
 		}
-	}(input, cmd[0])
 
-	switch strings.ToUpper(cmd[0]) {
-	case pkg.SetCMD:
-		s.db.Set(cmd[1], cmd[2])
-		return responder(pkg.OK, nil)
-	case pkg.GetCMD:
-		return responder(s.db.Get(cmd[1]), nil)
-	case pkg.DelCMD:
-		s.db.Delete(cmd[1])
-		return responder(pkg.OK, nil)
-	case pkg.EchoCMD:
-		return responder(s.db.Echo(cmd[1]), nil)
-	case pkg.PingCMD:
-		return responder(s.db.Ping(), nil)
-	default:
-		return responder("", errors.UnknownCommand{Command: cmd[0], Args: cmd[1:]})
+		return response
 	}
+
+	return responder(errors.UnknownCommand{Command: ins[0], Args: ins[1:]})
 }
 
 func (s *server) restore() errors.MultipleErrors {
@@ -127,18 +135,18 @@ func (s *server) restore() errors.MultipleErrors {
 			continue
 		}
 
-		cmd := strings.Split(instructions.String(), " ")
-		if cmd[0] == pkg.SetCMD {
-			s.db.Set(cmd[1], cmd[2])
+		ins := strings.Split(instructions.String(), " ")
+		if strings.EqualFold(ins[0], pkg.SET) {
+			s.db.SET(ins[1], ins[2])
 			continue
 		}
 
-		if cmd[0] == pkg.DelCMD {
-			s.db.Delete(cmd[1])
+		if strings.EqualFold(ins[0], pkg.DEL) {
+			s.db.DELETE(ins[1])
 			continue
 		}
 
-		mulErr.Errors = append(mulErr.Errors, fmt.Errorf("unknown command : %v to restore from AOF", cmd[0]))
+		mulErr.Errors = append(mulErr.Errors, fmt.Errorf("unknown command : %v to restore from AOF", ins[0]))
 	}
 
 	return mulErr
