@@ -14,6 +14,21 @@ import (
 	resp "github.com/zenith/redis-protocol"
 )
 
+type respond func(interface{}) string
+
+type cmdRouter func(...string) string
+
+func (s *server) route() map[string]cmdRouter {
+	return map[string]cmdRouter{
+		pkg.SET:  s.set,
+		pkg.GET:  s.get,
+		pkg.DEL:  s.delete,
+		pkg.ECHO: s.echo,
+		pkg.PING: s.ping,
+		pkg.MGET: s.get,
+	}
+}
+
 type Server interface {
 	Listen()
 	Close()
@@ -57,8 +72,6 @@ func (s *server) Close() {
 	}
 }
 
-type respond func(string, error) string
-
 func (s *server) dbSerializer() respond {
 	return func(response string, err error) string {
 		if err != nil {
@@ -77,9 +90,12 @@ func (s *server) exec(input string) string {
 		return responder("", err)
 	}
 
-	cmd := strings.Split(instructions.String(), " ")
-	defer func(string, string) {
-		if strings.EqualFold(cmd[0], pkg.SetCMD) || strings.EqualFold(cmd[0], pkg.DelCMD) {
+	ins := strings.Split(instructions.String(), " ")
+
+	if handler, found := s.route()[strings.ToUpper(ins[0])]; found {
+		response := handler(ins...)
+
+		if strings.EqualFold(ins[0], pkg.SET) || strings.EqualFold(ins[0], pkg.DEL) {
 			s.wal.Push(input)
 		}
 	}(input, cmd[0])
