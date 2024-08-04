@@ -30,6 +30,12 @@ func newDatabase() dbOps {
 
 func (d *database) PING() string { return "PONG" }
 
+/*
+Description:
+Set key to hold the string value. If key already holds a value, it is overwritten, regardless of its type.
+
+Time Complexity: O(1)
+*/
 func (d *database) SET(key, value string) {
 	d.mu.Lock()
 	defer d.mu.Unlock()
