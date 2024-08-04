@@ -43,6 +43,11 @@ func (d *database) SET(key, value string) {
 	d.records[key] = value
 }
 
+/*
+Description: Get the string value of key. If the key does not exist, the special value "(nil)" is returned.
+
+Time Complexity: O(1)
+*/
 func (d *database) GET(key string) string {
 	d.mu.Lock()
 	defer d.mu.Unlock()
