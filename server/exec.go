@@ -73,12 +73,17 @@ func (s *server) Close() {
 }
 
 func (s *server) dbSerializer() respond {
-	return func(response string, err error) string {
-		if err != nil {
-			return s.protocol.Serialize([]string{err.Error()})
+	return func(response interface{}) string {
+		switch v := response.(type) {
+		case string:
+			return s.protocol.Serialize([]string{v})
+		case []string:
+			return s.protocol.Serialize(v)
+		case error:
+			return s.protocol.Serialize([]string{v.Error()})
+		default:
+			return s.protocol.Serialize([]string{pkg.ERR + ": unknown response type"})
 		}
-
-		return s.protocol.Serialize([]string{response})
 	}
 }
 
@@ -87,7 +92,7 @@ func (s *server) exec(input string) string {
 
 	instructions, err := s.protocol.Deserialize(input)
 	if err != nil {
-		return responder("", err)
+		return responder(err)
 	}
 
 	ins := strings.Split(instructions.String(), " ")
@@ -98,24 +103,11 @@ func (s *server) exec(input string) string {
 		if strings.EqualFold(ins[0], pkg.SET) || strings.EqualFold(ins[0], pkg.DEL) {
 			s.wal.Push(input)
 		}
-	}(input, cmd[0])
 
-	switch strings.ToUpper(cmd[0]) {
-	case pkg.SetCMD:
-		s.db.Set(cmd[1], cmd[2])
-		return responder(pkg.OK, nil)
-	case pkg.GetCMD:
-		return responder(s.db.Get(cmd[1]), nil)
-	case pkg.DelCMD:
-		s.db.Delete(cmd[1])
-		return responder(pkg.OK, nil)
-	case pkg.EchoCMD:
-		return responder(s.db.Echo(cmd[1]), nil)
-	case pkg.PingCMD:
-		return responder(s.db.Ping(), nil)
-	default:
-		return responder("", errors.UnknownCommand{Command: cmd[0], Args: cmd[1:]})
+		return response
 	}
+
+	return responder(errors.UnknownCommand{Command: ins[0], Args: ins[1:]})
 }
 
 func (s *server) restore() errors.MultipleErrors {
