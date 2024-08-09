@@ -1,4 +1,4 @@
-package client
+package cli
 
 import (
 	"fmt"
@@ -7,20 +7,20 @@ import (
 	"strings"
 
 	pkg "github.com/zenith"
-	errors "github.com/zenith/errors/client"
+	errors "github.com/zenith/errors/cli"
 
 	resp "github.com/zenith/redis-protocol"
 )
 
-type client struct {
+type cli struct {
 	protocol resp.Protocol
 }
 
-func New() *client {
-	return &client{protocol: resp.New()}
+func New() *cli {
+	return &cli{protocol: resp.New()}
 }
 
-func (c *client) Exec(input []string) {
+func (c *cli) Exec(input []string) {
 	if err := validate(input); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		return

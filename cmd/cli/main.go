@@ -6,11 +6,11 @@ import (
 	"os"
 	"strings"
 
-	"github.com/zenith/client"
+	"github.com/zenith/cli"
 )
 
 func main() {
-	client := client.New()
+	client := cli.New()
 
 	reader := bufio.NewReader(os.Stdin)
 
